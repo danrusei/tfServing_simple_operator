@@ -1,0 +1,7 @@
+version: "2"
+domain: dev-state.com
+repo: github.com/Danr17/tfServing_simple_operator
+resources:
+- group: servapi
+  version: v1alpha1
+  kind: Tfserv

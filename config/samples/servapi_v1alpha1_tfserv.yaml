@@ -1,0 +1,7 @@
+apiVersion: servapi.dev-state.com/v1alpha1
+kind: Tfserv
+metadata:
+  name: tfserv-sample
+spec:
+  # Add fields here
+  foo: bar
