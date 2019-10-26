@@ -18,10 +18,16 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"log"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	servapiv1alpha1 "github.com/Danr17/tfServing_simple_operator/api/v1alpha1"
 )
@@ -39,9 +45,82 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("tfserv", req.NamespacedName)
 
+	tfs := &servapiv1alpha1.Tfserv{}
+
+	labels := map[string]string{
+		"tfsName": tfs.Name,
+	}
+
+	var deployment *appsv1.Deployment
+	// Got the Website resource instance, now reconcile owned Deployment and Service resources
+	deployment, err := r.createDeployment(tfs, labels)
+
+	//TODO ! temp to stop errors, but we have to remove it
+	log.Printf("this is deployment: %v", deployment)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// your logic here
 
 	return ctrl.Result{}, nil
+}
+
+func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels map[string]string) (*appsv1.Deployment, error) {
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tfs.Name,
+			Namespace: tfs.Namespace,
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &tfs.Spec.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   tfs.Name,
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:    tfs.Name,
+							Image:   "tensorflow/serving:latest",
+							Command: []string{"/usr/bin/tensorflow_model_server"},
+							Args: []string{
+								fmt.Sprintf("--port=%d", tfs.Spec.GrpcPort),
+								fmt.Sprintf("--rest_api_port=%d", tfs.Spec.RestPort),
+								fmt.Sprintf("--model_config_file=%s%s", tfs.Spec.ModelConfigLocation, tfs.Spec.ModelConfigFile),
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: tfs.Spec.GrpcPort,
+									Protocol:      corev1.ProtocolTCP,
+								},
+								{
+									ContainerPort: tfs.Spec.RestPort,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "tfs-config-volume",
+									MountPath: tfs.Spec.ModelConfigLocation,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return deployment, nil
+
 }
 
 func (r *TfservReconciler) SetupWithManager(mgr ctrl.Manager) error {

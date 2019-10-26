@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,14 +26,33 @@ import (
 
 // TfservSpec defines the desired state of Tfserv
 type TfservSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	//Name is the name of the model
+	Name string `json:"name"`
+	//Version is the model version
+	Version int32 `json:"version,omitempty"`
+	//Replicas is the number of pod replicas
+	Replicas int32 `json:"replicas,omitempty"`
+	//GrpcPort is the port number listening RPC
+	GrpcPort int32 `json:"grpcPort,omitempty"`
+	//RestPort is the port number listening REST
+	RestPort int32 `json:"restPort,omitempty"`
+	//ModelLocation is the location where the model is hosted
+	ModelLocation string `json:"modelLocation,omitempty"`
+	//ModelConfigFile is the name of the config file
+	ModelConfigFile string `json:"modelConfigFile,omitempty"`
+	//ModelConfigLocation is the path to config file
+	ModelConfigLocation string `json:"modelConfigLocation,omitempty"`
 }
 
 // TfservStatus defines the observed state of Tfserv
 type TfservStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// A list of pointers to currently running jobs.
+	// +optional
+	Active []corev1.ObjectReference `json:"active,omitempty"`
+
+	// Information when was the last time the job was successfully scheduled.
+	// +optional
+	LastScheduleTime *metav1.Time `json:"lastScheduleTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
