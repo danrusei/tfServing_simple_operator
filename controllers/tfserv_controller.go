@@ -54,13 +54,20 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var deployment *appsv1.Deployment
 	// Got the Website resource instance, now reconcile owned Deployment and Service resources
 	deployment, err := r.createDeployment(tfs, labels)
-
-	//TODO ! temp to stop errors, but we have to remove it
-	log.Printf("this is deployment: %v", deployment)
-
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	var service *corev1.Service
+	// Now reconcile the Service that is owned by the Website resource
+	service, err = r.createService(tfs, labels)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//TODO ! temp to stop errors, but we have to remove below lines
+	log.Printf("this is deployment: %v", deployment)
+	log.Printf("this is deployment: %v", service)
 
 	// your logic here
 
@@ -88,7 +95,7 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    tfs.Name,
+							Name:    "tfs_main",
 							Image:   "tensorflow/serving:latest",
 							Command: []string{"/usr/bin/tensorflow_model_server"},
 							Args: []string{
@@ -114,13 +121,29 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 							},
 						},
 					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "tfs-config-volume",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "tfs-config",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 	}
 
 	return deployment, nil
+}
 
+func (r *TfservReconciler) createService(tfs *servapiv1alpha1.Tfserv, labels map[string]string) (*corev1.Service, error) {
+
+	return nil, nil
 }
 
 func (r *TfservReconciler) SetupWithManager(mgr ctrl.Manager) error {
