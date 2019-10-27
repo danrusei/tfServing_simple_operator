@@ -65,9 +65,17 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	var configmap *corev1.ConfigMap
+	// Now reconcile the Service that is owned by the Website resource
+	configmap, err = r.createConfigMap(tfs, labels)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	//TODO ! temp to stop errors, but we have to remove below lines
 	log.Printf("this is deployment: %v", deployment)
-	log.Printf("this is deployment: %v", service)
+	log.Printf("this is service: %v", service)
+	log.Printf("this is configmap: %v", configmap)
 
 	// your logic here
 
@@ -143,7 +151,57 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 
 func (r *TfservReconciler) createService(tfs *servapiv1alpha1.Tfserv, labels map[string]string) (*corev1.Service, error) {
 
-	return nil, nil
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tfs.Name + "-service",
+			Namespace: tfs.Namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:     "rest",
+					Port:     tfs.Spec.RestPort,
+					Protocol: corev1.ProtocolTCP,
+				},
+				{
+					Name:     "grpcs",
+					Port:     tfs.Spec.GrpcPort,
+					Protocol: corev1.ProtocolTCP,
+				},
+			},
+			Selector: map[string]string{"app": tfs.Name},
+		},
+	}
+
+	return service, nil
+}
+
+func (r *TfservReconciler) createConfigMap(tfs *servapiv1alpha1.Tfserv, labels map[string]string) (*corev1.ConfigMap, error) {
+
+	configmap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: tfs.Name + "-config",
+		},
+		/*Data: map[string]string{
+			tfs.Spec.ModelConfigFile: +
+			model_config_list: {
+				config: {
+				  name: "resnet",
+				  base_path: "s3://ml-models-repository/resnet",
+				  model_platform: "tensorflow",
+				  model_version_policy: {
+					specific: {
+					  versions: 1
+					}
+				  }
+				}
+			  },
+		},
+		*/
+
+	}
+	return configmap, nil
 }
 
 func (r *TfservReconciler) SetupWithManager(mgr ctrl.Manager) error {
