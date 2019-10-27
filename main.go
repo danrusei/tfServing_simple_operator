@@ -66,6 +66,7 @@ func main() {
 	if err = (&controllers.TfservReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Tfserv"),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Tfserv")
 		os.Exit(1)

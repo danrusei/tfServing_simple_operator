@@ -4,22 +4,22 @@ metadata:
   name: tfserv-sample
 spec:
   #Name is the name of the model
-  Name: "tfserv-test"
+  name: "tfserv-test"
   #Version is the model version
   #Version: 1538687457
   #Replicas is the number of pod replicas
-  Replicas: 3
+  replicas: 3
   #GrpcPort is the port number listening RPC
-  GrpcPort: 9000
+  grpcPort: 9000
   #RestPort is the port number listening REST
-  RestPort: 8500
+  restPort: 8500
   #ConfigMap is the name of the ConfigMap used for configuration
-  ConfigMap: "tf-serving-models-config"
+  configMap: "tf-serving-models-config"
   #ConfigFileName is the name of the config file
-  ConfigFileName: "configFile"
+  configFileName: "configFile"
   #ConfigFileLocation is the path to config file
-  ConfigFileLocation: "/var/config"
+  configFileLocation: "/var/config"
   #SecretFileName is the name of the secret file
-  SecretFileName: "tf-secret"
+  secretFileName: "tf-secret"
   #SecretFileLocation is the path to the Secret file
-  SecretFileLocation: "/secret/gcp-credentials/"
+  secretFileLocation: "/secret/gcp-credentials/"

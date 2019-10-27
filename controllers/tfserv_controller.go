@@ -42,7 +42,7 @@ import (
 type TfservReconciler struct {
 	client.Client
 	Log    logr.Logger
-	scheme *runtime.Scheme
+	Scheme *runtime.Scheme
 	//	recorder record.EventRecorder
 }
 
@@ -79,8 +79,8 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	//Set instance as the owner and controller for this configmap
-	if err := controllerutil.SetControllerReference(&tfs, configmap, r.scheme); err != nil {
-		return reconcile.Result{}, err
+	if err := controllerutil.SetControllerReference(&tfs, configmap, r.Scheme); err != nil {
+		return ctrl.Result{}, err
 	}
 	//currentConfigVersion := configmap.ResourceVersion
 	//TODO Store the configversion annotation deployment or tfs Status
@@ -122,10 +122,11 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		return reconcile.Result{}, nil
 	}
-	return reconcile.Result{}, nil
 
-	// Define the desired Service object
+	//Define the desired Service object
+
 	var service *corev1.Service
 	service, err = r.createService(&tfs, labels)
 	if err != nil {
@@ -243,7 +244,7 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 	// This is used for garbage collection of the owned object and for
 	// reconciling the owner object on changes to owned (with a Watch + EnqueueRequestForOwner).
 
-	if err := controllerutil.SetControllerReference(tfs, deployment, r.scheme); err != nil {
+	if err := controllerutil.SetControllerReference(tfs, deployment, r.Scheme); err != nil {
 		return nil, err
 	}
 
@@ -279,7 +280,7 @@ func (r *TfservReconciler) createService(tfs *servapiv1alpha1.Tfserv, labels map
 	// This is used for garbage collection of the owned object and for
 	// reconciling the owner object on changes to owned (with a Watch + EnqueueRequestForOwner).
 
-	if err := controllerutil.SetControllerReference(tfs, service, r.scheme); err != nil {
+	if err := controllerutil.SetControllerReference(tfs, service, r.Scheme); err != nil {
 		return nil, err
 	}
 
