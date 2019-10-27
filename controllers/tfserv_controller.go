@@ -34,7 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 
 	servapiv1alpha1 "github.com/Danr17/tfServing_simple_operator/api/v1alpha1"
 )
@@ -42,9 +41,9 @@ import (
 // TfservReconciler reconciles a Tfserv object
 type TfservReconciler struct {
 	client.Client
-	Log      logr.Logger
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	Log    logr.Logger
+	scheme *runtime.Scheme
+	//	recorder record.EventRecorder
 }
 
 func ignoreNotFound(err error) error {
@@ -72,7 +71,18 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	// Verify that ConfigMap exist, do not continue until we find it
-	//TODO put code below !!!!!
+	var configmap *corev1.ConfigMap
+	err := r.Get(ctx, types.NamespacedName{Name: tfs.Spec.ConfigMap, Namespace: tfs.Namespace}, configmap)
+	if err != nil && errors.IsNotFound(err) {
+		log.V(1).Info("ConfigMap %s not found, wont continue untill config map is found\n", tfs.Spec.ConfigMap)
+		return ctrl.Result{}, err
+	}
+
+	//Set instance as the owner and controller for this configmap
+	if err := controllerutil.SetControllerReference(&tfs, configmap, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+	//currentConfigVersion := configmap.ResourceVersion
 
 	labels := map[string]string{
 		"tfsName": tfs.Name,
@@ -80,7 +90,7 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// Define the desired Deployment object
 	var deployment *appsv1.Deployment
-	deployment, err := r.createDeployment(&tfs, labels)
+	deployment, err = r.createDeployment(&tfs, labels)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
