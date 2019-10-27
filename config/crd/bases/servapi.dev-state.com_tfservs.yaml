@@ -32,19 +32,19 @@ spec:
         spec:
           description: TfservSpec defines the desired state of Tfserv
           properties:
+            configFileLocation:
+              description: ConfigFileLocation is the path to config file
+              type: string
+            configFileName:
+              description: ConfigFileName is the name of the config file
+              type: string
+            configMap:
+              description: ConfigMap is the name of the ConfigMap used for configuration
+              type: string
             grpcPort:
               description: GrpcPort is the port number listening RPC
               format: int32
               type: integer
-            modelConfigFile:
-              description: ModelConfigFile is the name of the config file
-              type: string
-            modelConfigLocation:
-              description: ModelConfigLocation is the path to config file
-              type: string
-            modelLocation:
-              description: ModelLocation is the location where the model is hosted
-              type: string
             name:
               description: Name is the name of the model
               type: string
@@ -56,6 +56,12 @@ spec:
               description: RestPort is the port number listening REST
               format: int32
               type: integer
+            secretFileLocation:
+              description: SecretFileLocation is the path to the Secret file
+              type: string
+            secretFileName:
+              description: SecretFileName is the name of the secret file
+              type: string
             version:
               description: Version is the model version
               format: int32

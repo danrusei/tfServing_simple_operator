@@ -38,10 +38,14 @@ type TfservSpec struct {
 	RestPort int32 `json:"restPort,omitempty"`
 	//ConfigMap is the name of the ConfigMap used for configuration
 	ConfigMap string `json:"configMap,omitempty"`
-	//ModelConfigFile is the name of the config file
-	ModelConfigFile string `json:"modelConfigFile,omitempty"`
-	//ModelConfigLocation is the path to config file
-	ModelConfigLocation string `json:"modelConfigLocation,omitempty"`
+	//ConfigFileName is the name of the config file
+	ConfigFileName string `json:"configFileName,omitempty"`
+	//ConfigFileLocation is the path to config file
+	ConfigFileLocation string `json:"configFileLocation,omitempty"`
+	//SecretFileName is the name of the secret file
+	SecretFileName string `json:"secretFileName,omitempty"`
+	//SecretFileLocation is the path to the Secret file
+	SecretFileLocation string `json:"secretFileLocation,omitempty"`
 }
 
 // TfservStatus defines the observed state of Tfserv

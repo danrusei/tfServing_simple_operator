@@ -83,6 +83,8 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, err
 	}
 	//currentConfigVersion := configmap.ResourceVersion
+	//TODO Store the configversion annotation deployment or tfs Status
+	//TODO If Deployment is already running, check if the configmap version changed. If it does, delete and redeploy.
 
 	labels := map[string]string{
 		"tfsName": tfs.Name,
@@ -116,7 +118,7 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if !reflect.DeepEqual(deployment.Spec, foundDeployment.Spec) {
 		foundDeployment.Spec = deployment.Spec
 		log.V(1).Info("Updating Deployment %s/%s\n", deployment.Namespace, deployment.Name)
-		err = r.Update(context.TODO(), foundDeployment)
+		err = r.Update(ctx, foundDeployment)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -178,7 +180,13 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 							Args: []string{
 								fmt.Sprintf("--port=%d", tfs.Spec.GrpcPort),
 								fmt.Sprintf("--rest_api_port=%d", tfs.Spec.RestPort),
-								fmt.Sprintf("--model_config_file=%s%s", tfs.Spec.ModelConfigLocation, tfs.Spec.ModelConfigFile),
+								fmt.Sprintf("--model_config_file=%s%s", tfs.Spec.ConfigFileLocation, tfs.Spec.ConfigFileName),
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "GOOGLE_APPLICATION_CREDENTIALS",
+									Value: tfs.Spec.SecretFileLocation + tfs.Spec.SecretFileName,
+								},
 							},
 							Ports: []corev1.ContainerPort{
 								{
@@ -193,7 +201,11 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "tfs-config-volume",
-									MountPath: tfs.Spec.ModelConfigLocation,
+									MountPath: tfs.Spec.ConfigFileLocation,
+								},
+								{
+									Name:      "tfs-secret-volume",
+									MountPath: tfs.Spec.SecretFileLocation,
 								},
 							},
 						},
@@ -206,6 +218,18 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "tfs-config",
 									},
+								},
+							},
+						},
+						{
+							Name: "tfs-secret-volume",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "tfs-secret",
+									//TODO I may need to add
+									//items:
+									// - key: service-account-key
+									//   path: key.json
 								},
 							},
 						},
