@@ -19,15 +19,22 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"log"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 
 	servapiv1alpha1 "github.com/Danr17/tfServing_simple_operator/api/v1alpha1"
 )
@@ -35,47 +42,99 @@ import (
 // TfservReconciler reconciles a Tfserv object
 type TfservReconciler struct {
 	client.Client
-	Log logr.Logger
+	Log      logr.Logger
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
+}
+
+func ignoreNotFound(err error) error {
+	if apierrs.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 // +kubebuilder:rbac:groups=servapi.dev-state.com,resources=tfservs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=servapi.dev-state.com,resources=tfservs/status,verbs=get;update;patch
 
+//Reconcile method
 func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("tfserv", req.NamespacedName)
+	ctx := context.Background()
+	log := r.Log.WithValues("tfserv", req.NamespacedName)
 
-	tfs := &servapiv1alpha1.Tfserv{}
+	var tfs servapiv1alpha1.Tfserv
+	if err := r.Get(ctx, req.NamespacedName, &tfs); err != nil {
+		log.Error(err, "unable to fetch tfs")
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, ignoreNotFound(err)
+	}
+
+	// Verify that ConfigMap exist, do not continue until we find it
+	//TODO put code below !!!!!
 
 	labels := map[string]string{
 		"tfsName": tfs.Name,
 	}
 
+	// Define the desired Deployment object
 	var deployment *appsv1.Deployment
-	// Got the Website resource instance, now reconcile owned Deployment and Service resources
-	deployment, err := r.createDeployment(tfs, labels)
+	deployment, err := r.createDeployment(&tfs, labels)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
+	// Check if the Deployment already exists
+	foundDeployment := &appsv1.Deployment{}
+	err = r.Get(ctx, types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}, foundDeployment)
+	//If the deployment does not exist, create it
+	if err != nil && errors.IsNotFound(err) {
+		log.V(1).Info("Creating Deployment %s/%s\n", deployment.Namespace, deployment.Name)
+		err = r.Create(ctx, deployment)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		//	r.recorder.Eventf(tfs, "Normal", "DeploymentCreated", "The Deployment %s has been created", deployment.Name)
+		log.V(1).Info("The Deployment %s has been created\n", deployment.Name)
+		return ctrl.Result{}, nil
+	} else if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Update the found deployment and write the result back if there are any changes
+	if !reflect.DeepEqual(deployment.Spec, foundDeployment.Spec) {
+		foundDeployment.Spec = deployment.Spec
+		log.V(1).Info("Updating Deployment %s/%s\n", deployment.Namespace, deployment.Name)
+		err = r.Update(context.TODO(), foundDeployment)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+	return reconcile.Result{}, nil
+
+	// Define the desired Service object
 	var service *corev1.Service
-	// Now reconcile the Service that is owned by the Website resource
-	service, err = r.createService(tfs, labels)
+	service, err = r.createService(&tfs, labels)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	var configmap *corev1.ConfigMap
-	// Now reconcile the Service that is owned by the Website resource
-	configmap, err = r.createConfigMap(tfs, labels)
-	if err != nil {
-		return ctrl.Result{}, err
+	//check if the service already exists
+	foundService := &corev1.Service{}
+	err = r.Get(ctx, types.NamespacedName{Name: service.Name, Namespace: service.Namespace}, foundService)
+	//If the service does not exist, create it
+	if err != nil && errors.IsNotFound(err) {
+		log.V(1).Info("Creating a new Service", "Service.Namespace", service.Name, "Service.Name", service.Name)
+		err = r.Create(ctx, service)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		log.V(1).Info("The Deployment %s has been created\n", deployment.Name)
+		return ctrl.Result{}, nil
+	} else if err != nil {
+		return reconcile.Result{}, err
 	}
-
-	//TODO ! temp to stop errors, but we have to remove below lines
-	log.Printf("this is deployment: %v", deployment)
-	log.Printf("this is service: %v", service)
-	log.Printf("this is configmap: %v", configmap)
 
 	// your logic here
 
@@ -146,6 +205,14 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 		},
 	}
 
+	// SetControllerReference sets owner as a Controller OwnerReference on owned.
+	// This is used for garbage collection of the owned object and for
+	// reconciling the owner object on changes to owned (with a Watch + EnqueueRequestForOwner).
+
+	if err := controllerutil.SetControllerReference(tfs, deployment, r.scheme); err != nil {
+		return nil, err
+	}
+
 	return deployment, nil
 }
 
@@ -174,36 +241,18 @@ func (r *TfservReconciler) createService(tfs *servapiv1alpha1.Tfserv, labels map
 		},
 	}
 
+	// SetControllerReference sets owner as a Controller OwnerReference on owned.
+	// This is used for garbage collection of the owned object and for
+	// reconciling the owner object on changes to owned (with a Watch + EnqueueRequestForOwner).
+
+	if err := controllerutil.SetControllerReference(tfs, service, r.scheme); err != nil {
+		return nil, err
+	}
+
 	return service, nil
 }
 
-func (r *TfservReconciler) createConfigMap(tfs *servapiv1alpha1.Tfserv, labels map[string]string) (*corev1.ConfigMap, error) {
-
-	configmap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: tfs.Name + "-config",
-		},
-		/*Data: map[string]string{
-			tfs.Spec.ModelConfigFile: +
-			model_config_list: {
-				config: {
-				  name: "resnet",
-				  base_path: "s3://ml-models-repository/resnet",
-				  model_platform: "tensorflow",
-				  model_version_policy: {
-					specific: {
-					  versions: 1
-					}
-				  }
-				}
-			  },
-		},
-		*/
-
-	}
-	return configmap, nil
-}
-
+//SetupWithManager setup the controler with manager
 func (r *TfservReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&servapiv1alpha1.Tfserv{}).

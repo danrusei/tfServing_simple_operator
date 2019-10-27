@@ -36,8 +36,6 @@ type TfservSpec struct {
 	GrpcPort int32 `json:"grpcPort,omitempty"`
 	//RestPort is the port number listening REST
 	RestPort int32 `json:"restPort,omitempty"`
-	//ModelLocation is the location where the model is hosted
-	ModelLocation string `json:"modelLocation,omitempty"`
 	//ModelConfigFile is the name of the config file
 	ModelConfigFile string `json:"modelConfigFile,omitempty"`
 	//ModelConfigLocation is the path to config file
