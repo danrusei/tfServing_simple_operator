@@ -127,7 +127,7 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, nil
+		//	return reconcile.Result{}, nil
 	}
 
 	//Define the desired Service object
@@ -148,13 +148,25 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		log.V(1).Info("The Deployment has been created", "Deployment.Name", deployment.Name)
+		log.V(1).Info("The Service has been created", "Service.Name", service.Name)
 		return ctrl.Result{}, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// your logic here
+	//the below code is not working due to https://github.com/kubernetes/kubernetes/issues/68369
+	/*
+		// Update the found service and write the result back if there are any changes
+		if !reflect.DeepEqual(service.Spec, foundService.Spec) {
+			foundService.Spec = service.Spec
+			log.V(1).Info("Updating Service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
+			err = r.Update(ctx, foundService)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			//	return reconcile.Result{}, nil
+		}
+	*/
 
 	return ctrl.Result{}, nil
 }
@@ -272,12 +284,13 @@ func (r *TfservReconciler) createService(tfs *servapiv1alpha1.Tfserv, labels map
 					Protocol: corev1.ProtocolTCP,
 				},
 				{
-					Name:     "grpcs",
+					Name:     "grpc",
 					Port:     tfs.Spec.GrpcPort,
 					Protocol: corev1.ProtocolTCP,
 				},
 			},
-			Selector: map[string]string{"app": tfs.Name},
+			//Selector: map[string]string{"app": tfs.Name},
+			Selector: labels,
 		},
 	}
 
@@ -302,7 +315,7 @@ func (r *TfservReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return nil
 		}
 		// ...make sure it's a Deployment...
-		if owner.APIVersion != apiGVStr || owner.Kind != "Deployment" {
+		if owner.APIVersion != apiGVStr || owner.Kind != "Tfserv" {
 			return nil
 		}
 
@@ -320,7 +333,7 @@ func (r *TfservReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return nil
 		}
 		// ...make sure it's a Service...
-		if owner.APIVersion != apiGVStr || owner.Kind != "Service" {
+		if owner.APIVersion != apiGVStr || owner.Kind != "Tfserv" {
 			return nil
 		}
 
