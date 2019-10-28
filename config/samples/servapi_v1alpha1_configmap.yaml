@@ -7,7 +7,7 @@ data:
     model_config_list: {
       config: {
         name: "resnet",
-        base_path: "gs://tfmodel-store",
+        base_path: "gs://tfmodel-store/resnet",
         model_platform: "tensorflow",
         model_version_policy: {
           specific: {

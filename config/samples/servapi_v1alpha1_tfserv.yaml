@@ -16,10 +16,10 @@ spec:
   #ConfigMap is the name of the ConfigMap used for configuration
   configMap: "tf-serving-models-config"
   #ConfigFileName is the name of the config file
-  configFileName: "configFile"
+  configFileName: "models.conf"
   #ConfigFileLocation is the path to config file
-  configFileLocation: "/var/config"
+  configFileLocation: "/var/config/"
   #SecretFileName is the name of the secret file
-  secretFileName: "tf-secret"
+  secretFileName: "test-apps-model-viewer.json"
   #SecretFileLocation is the path to the Secret file
   secretFileLocation: "/secret/gcp-credentials/"

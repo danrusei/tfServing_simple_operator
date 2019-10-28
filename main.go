@@ -20,6 +20,9 @@ import (
 	"flag"
 	"os"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+
 	servapiv1alpha1 "github.com/Danr17/tfServing_simple_operator/api/v1alpha1"
 	"github.com/Danr17/tfServing_simple_operator/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +42,8 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
 	_ = servapiv1alpha1.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+	_ = appsv1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 

@@ -46,6 +46,11 @@ type TfservReconciler struct {
 	//	recorder record.EventRecorder
 }
 
+var (
+	ownerKey = ".metadata.controller"
+	apiGVStr = servapiv1alpha1.GroupVersion.String()
+)
+
 func ignoreNotFound(err error) error {
 	if apierrs.IsNotFound(err) {
 		return nil
@@ -74,14 +79,14 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var configmap *corev1.ConfigMap
 	err := r.Get(ctx, types.NamespacedName{Name: tfs.Spec.ConfigMap, Namespace: tfs.Namespace}, configmap)
 	if err != nil && errors.IsNotFound(err) {
-		log.V(1).Info("ConfigMap %s not found, wont continue untill config map is found\n", tfs.Spec.ConfigMap)
+		log.V(1).Info("ConfigMap not found, wont continue untill config map is found", "tfs.Spec.ConfigMap", tfs.Spec.ConfigMap)
 		return ctrl.Result{}, err
 	}
 
 	//Set instance as the owner and controller for this configmap
-	if err := controllerutil.SetControllerReference(&tfs, configmap, r.Scheme); err != nil {
-		return ctrl.Result{}, err
-	}
+	//if err := controllerutil.SetControllerReference(&tfs, configmap, r.Scheme); err != nil {
+	//	return ctrl.Result{}, err
+	//}
 	//currentConfigVersion := configmap.ResourceVersion
 	//TODO Store the configversion annotation deployment or tfs Status
 	//TODO If Deployment is already running, check if the configmap version changed. If it does, delete and redeploy.
@@ -102,13 +107,13 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	err = r.Get(ctx, types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}, foundDeployment)
 	//If the deployment does not exist, create it
 	if err != nil && errors.IsNotFound(err) {
-		log.V(1).Info("Creating Deployment %s/%s\n", deployment.Namespace, deployment.Name)
+		log.V(1).Info("Creating Deployment", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
 		err = r.Create(ctx, deployment)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		//	r.recorder.Eventf(tfs, "Normal", "DeploymentCreated", "The Deployment %s has been created", deployment.Name)
-		log.V(1).Info("The Deployment %s has been created\n", deployment.Name)
+		log.V(1).Info("The Deployment has been created", "Deployment.Name", deployment.Name)
 		return ctrl.Result{}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
@@ -117,7 +122,7 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Update the found deployment and write the result back if there are any changes
 	if !reflect.DeepEqual(deployment.Spec, foundDeployment.Spec) {
 		foundDeployment.Spec = deployment.Spec
-		log.V(1).Info("Updating Deployment %s/%s\n", deployment.Namespace, deployment.Name)
+		log.V(1).Info("Updating Deployment", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
 		err = r.Update(ctx, foundDeployment)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -143,7 +148,7 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		log.V(1).Info("The Deployment %s has been created\n", deployment.Name)
+		log.V(1).Info("The Deployment has been created", "Deployment.Name", deployment.Name)
 		return ctrl.Result{}, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
@@ -175,7 +180,7 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "tfs_main",
+							Name:    "tfs-main",
 							Image:   "tensorflow/serving:latest",
 							Command: []string{"/usr/bin/tensorflow_model_server"},
 							Args: []string{
@@ -217,7 +222,7 @@ func (r *TfservReconciler) createDeployment(tfs *servapiv1alpha1.Tfserv, labels 
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "tfs-config",
+										Name: "tf-serving-models-config",
 									},
 								},
 							},
@@ -289,7 +294,45 @@ func (r *TfservReconciler) createService(tfs *servapiv1alpha1.Tfserv, labels map
 
 //SetupWithManager setup the controler with manager
 func (r *TfservReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(&appsv1.Deployment{}, ownerKey, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		deployment := rawObj.(*appsv1.Deployment)
+		owner := metav1.GetControllerOf(deployment)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a Deployment...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Deployment" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(&corev1.Service{}, ownerKey, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		service := rawObj.(*corev1.Service)
+		owner := metav1.GetControllerOf(service)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a Service...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Service" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&servapiv1alpha1.Tfserv{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
 		Complete(r)
 }
