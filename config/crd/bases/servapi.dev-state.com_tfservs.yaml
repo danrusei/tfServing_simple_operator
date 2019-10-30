@@ -39,15 +39,12 @@ spec:
               description: ConfigFileName is the name of the config file
               type: string
             configMap:
-              description: ConfigMap is the name of the ConfigMap used for configuration
+              description: GrpcPort is the port number listening RPC ConfigMap is
+                the name of the ConfigMap used for configuration
               type: string
             grpcPort:
-              description: GrpcPort is the port number listening RPC
               format: int32
               type: integer
-            name:
-              description: Name is the name of the model
-              type: string
             replicas:
               description: Replicas is the number of pod replicas
               format: int32
@@ -62,18 +59,12 @@ spec:
             secretFileName:
               description: SecretFileName is the name of the secret file
               type: string
-            version:
-              description: Version is the model version
-              format: int32
-              type: integer
-          required:
-          - name
           type: object
         status:
           description: TfservStatus defines the observed state of Tfserv
           properties:
             active:
-              description: A list of pointers to currently running jobs.
+              description: A list of pointers to currently running objects.
               items:
                 description: ObjectReference contains enough information to let you
                   inspect or modify the referred object.
@@ -112,11 +103,6 @@ spec:
                     type: string
                 type: object
               type: array
-            lastScheduleTime:
-              description: Information when was the last time the job was successfully
-                scheduled.
-              format: date-time
-              type: string
           type: object
       type: object
   version: v1alpha1

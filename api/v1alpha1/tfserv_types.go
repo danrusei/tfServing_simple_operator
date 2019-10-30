@@ -26,16 +26,12 @@ import (
 
 // TfservSpec defines the desired state of Tfserv
 type TfservSpec struct {
-	//Name is the name of the model
-	Name string `json:"name"`
-	//Version is the model version
-	Version int32 `json:"version,omitempty"`
-	//Replicas is the number of pod replicas
-	Replicas int32 `json:"replicas,omitempty"`
-	//GrpcPort is the port number listening RPC
 	GrpcPort int32 `json:"grpcPort,omitempty"`
 	//RestPort is the port number listening REST
 	RestPort int32 `json:"restPort,omitempty"`
+	//Replicas is the number of pod replicas
+	Replicas int32 `json:"replicas,omitempty"`
+	//GrpcPort is the port number listening RPC
 	//ConfigMap is the name of the ConfigMap used for configuration
 	ConfigMap string `json:"configMap,omitempty"`
 	//ConfigFileName is the name of the config file
@@ -50,13 +46,8 @@ type TfservSpec struct {
 
 // TfservStatus defines the observed state of Tfserv
 type TfservStatus struct {
-	// A list of pointers to currently running jobs.
-	// +optional
+	// A list of pointers to currently running objects.
 	Active []corev1.ObjectReference `json:"active,omitempty"`
-
-	// Information when was the last time the job was successfully scheduled.
-	// +optional
-	LastScheduleTime *metav1.Time `json:"lastScheduleTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
