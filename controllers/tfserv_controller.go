@@ -291,6 +291,7 @@ func (r *TfservReconciler) createService(tfs *servapiv1alpha1.Tfserv, labels map
 			},
 			//Selector: map[string]string{"app": tfs.Name},
 			Selector: labels,
+			Type:     corev1.ServiceTypeNodePort,
 		},
 	}
 
