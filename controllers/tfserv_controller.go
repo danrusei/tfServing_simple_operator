@@ -127,7 +127,7 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, nil
+		//	return ctrl.Result{}, nil
 	}
 
 	//Define the desired Service object
