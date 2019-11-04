@@ -88,8 +88,9 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	//	return ctrl.Result{}, err
 	//}
 	//currentConfigVersion := configmap.ResourceVersion
-	//TODO Store the configversion annotation deployment or tfs Status
-	//TODO If Deployment is already running, check if the configmap version changed. If it does, delete and redeploy.
+
+	//!!!TODO Store the configversion annotation deployment or tfs Status
+	//!!!TODO If Deployment is already running, check if the configmap version changed. If it does, delete and redeploy.
 
 	labels := map[string]string{
 		"tfsName": tfs.Name,
