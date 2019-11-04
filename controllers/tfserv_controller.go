@@ -125,9 +125,9 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		log.V(1).Info("Updating Deployment", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
 		err = r.Update(ctx, foundDeployment)
 		if err != nil {
-			return reconcile.Result{}, err
+			return ctrl.Result{}, err
 		}
-		//	return reconcile.Result{}, nil
+		return ctrl.Result{}, nil
 	}
 
 	//Define the desired Service object
@@ -151,7 +151,7 @@ func (r *TfservReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		log.V(1).Info("The Service has been created", "Service.Name", service.Name)
 		return ctrl.Result{}, nil
 	} else if err != nil {
-		return reconcile.Result{}, err
+		return ctrl.Result{}, err
 	}
 
 	//the below code is not working due to https://github.com/kubernetes/kubernetes/issues/68369
